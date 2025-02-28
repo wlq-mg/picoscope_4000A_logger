@@ -40,7 +40,7 @@ class PicoViewer(QtWidgets.QWidget):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        uic.loadUi(os.path.join(os.path.dirname(__file__), "gui", "viewer_widget.ui"), self) 
+        uic.loadUi(os.path.join(os.path.dirname(__file__), "viewer_widget.ui"), self) 
         
         # graph: pg.PlotWidget = self.graph
         self.graph.getAxis('bottom').setLabel(text='Time', units='s')
@@ -51,7 +51,14 @@ class PicoViewer(QtWidgets.QWidget):
         self.define_actions()
         
         # TODO not solid
+        
         self.directory = self.directory_label.text()
+        # Check if the folder exists:
+        if not os.path.exists(self.directory):
+            QtWidgets.QMessageBox.critical(self, 'Error', 'The selected directory does not exist.')
+            self.directory = os.getcwd()
+            self.directory_label.setText(self.directory)
+
 
         self.create_measurements_tree()
 
@@ -140,6 +147,8 @@ class PicoViewer(QtWidgets.QWidget):
         # Root node
         root_item = pg.TreeWidgetItem(["Measurements"])
         tree.addTopLevelItem(root_item)
+
+
 
         # Get folders organized by date
         folders_by_date = list_folders_by_date(self.directory)

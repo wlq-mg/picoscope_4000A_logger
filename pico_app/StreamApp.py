@@ -61,6 +61,7 @@ class MainWindow(QtWidgets.QWidget):
         uic.loadUi(os.path.join(os.path.dirname(__file__), "gui", "stream_app_gui.ui"), self) 
         self.setWindowTitle("Picoscope")
         self.ChannelParametersWidget.hide()
+        self.warning_widget.hide()
         self.build_scales_layout()
         self.setup_scope_screen()
 
@@ -68,6 +69,7 @@ class MainWindow(QtWidgets.QWidget):
         self.top_widgets.insertWidget(0, self.samplerate_widget)
 
         self.add_welinq_logo()
+
 
         self.connect_scope()
     
@@ -133,20 +135,21 @@ class MainWindow(QtWidgets.QWidget):
         self.save_config()
 
     def refresh_hardware(self):
-        self.timer.stop()
+        if hasattr(self, "timer"):
+            self.timer.stop()
         
         [channel.buffer.clear() for channel in self.settings.values()]
 
         for ch in AVAILABLE_CHANNELS:
             self.settings[ch].buffer.clear()
-        
-        self.setup_channels()
-        self.setup_trigger()
-        self.setup_acquisition()
+        try:
+            self.setup_channels()
+            self.setup_trigger()
+            self.setup_acquisition()
+        except Exception as e:
+            self.save_config()
+            print("Hardware not ocnnected")
 
-        time.sleep(.2)
-
-        self.save_config()
         self.timer.start()
 
     def connect_scope(self):
@@ -405,6 +408,7 @@ class MainWindow(QtWidgets.QWidget):
         res = calculate_sample_interval(sample_rate)
         self.sample_interval, self.time_unit = res
 
+        time.sleep(1)
         # Start the streaming
         _ = self.picoscope.run_streaming(
             sample_interval= self.sample_interval,

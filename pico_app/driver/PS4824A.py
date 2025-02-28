@@ -93,8 +93,9 @@ def check_status(func):
     def wrapper(self, *args, **kwargs):
         result = func(self, *args, **kwargs)
         if self.status != 0:
+            print(pico_tag(self.status))
             # You can raise a custom exception or RuntimeError, etc.
-            raise RuntimeError(pico_tag(self.status))
+            # raise RuntimeError(pico_tag(self.status))
         return result
     return wrapper
 

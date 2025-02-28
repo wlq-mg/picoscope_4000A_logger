@@ -30,7 +30,7 @@ def read_recorded_data(directory):
                 for line in header_text.splitlines():
                     if ':' in line:
                         key, value = line.split(':', 1)
-                        header[key.strip()] = float(value.strip())
+                        header[key.strip()] = float(value.split()[0].strip())
                 
                 # Extract channel name from filename
                 channel_name = filename.split('_')[-1].replace('.bin', '')
@@ -47,7 +47,7 @@ def read_recorded_data(directory):
 
 
 if __name__ == '__main__':
-    header, data = read_recorded_data('./data/20250227_132729')
+    header, data = read_recorded_data('pico_app/data/20250225_155503')
     
     scale = header['A']['Scale']
     _data = data['A']

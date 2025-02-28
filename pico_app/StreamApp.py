@@ -1,11 +1,12 @@
+import os
 import sys
 import time
 from PyQt5 import QtWidgets, QtCore, uic, QtSvg
 
 import numpy as np
-
-import os
-os.environ["QT_QPA_PLATFORM"] = "xcb"
+# only on linux
+if os.name == 'posix':
+    os.environ["QT_QPA_PLATFORM"] = "xcb"
 
 import pyqtgraph as pg
 from driver.PS4824A      import PS4000A
@@ -16,7 +17,11 @@ from tools import Channel
 from gui.costumWidgets import ChannelBtn, WelinqSpinBox
 import configparser
 
+from gui.viewer import PicoViewer
+
 from datetime import datetime
+
+DEBUG = False
 
 # Colors 
 AVAILABLE_CHANNELS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
@@ -24,10 +29,7 @@ WELINQ_DARK = "#002e21"
 WELINQ_LIGHT = "#d9f175"
 COLORS = ['#d9f175', '#1abc9c','#e67e22', '#3498db', '#9b59b6', '#e74c3c', '#f1c40f', '#2ecc71',  ]
 
-CONFIG_FILE = "config.ini"
-
-
-
+CONFIG_FILE = "pico_app/config.ini"
 
 def calculate_sample_interval(sample_frequency):
     """
@@ -56,7 +58,7 @@ class MainWindow(QtWidgets.QWidget):
     
     def __init__(self):
         super().__init__()
-        uic.loadUi("gui/stream_app_gui.ui", self) 
+        uic.loadUi(os.path.join(os.path.dirname(__file__), "gui", "stream_app_gui.ui"), self) 
         self.setWindowTitle("Picoscope")
         self.ChannelParametersWidget.hide()
         self.build_scales_layout()
@@ -67,11 +69,7 @@ class MainWindow(QtWidgets.QWidget):
 
         self.add_welinq_logo()
 
-        self.picoscope = PS4000A()
-        self.picoscope.open_unit()
-        variant_info = self.picoscope.get_unit_info(PICO_INFO.PICO_VARIANT_INFO)
-        batch_serial = self.picoscope.get_unit_info(PICO_INFO.PICO_BATCH_AND_SERIAL)
-        self.setWindowTitle(f"PicoSope {variant_info} [{batch_serial}]")
+        self.connect_scope()
     
         self.settings: dict[CHANNEL, Channel]= {}
         self.plots = {}
@@ -121,6 +119,11 @@ class MainWindow(QtWidgets.QWidget):
         self.stop_btn.clicked.connect(self.stop_recording)
         self.change_dir_btn.clicked.connect(self.change_directory)
         self.samplerate_widget.valueChanged.connect(self.refresh_hardware)
+        self.viewer_btn.clicked.connect(self.open_viewer)
+
+    def open_viewer(self):
+        self.viewer = PicoViewer(self.logging_directory)
+        self.viewer.show()
 
     def change_directory(self):
         directory = QtWidgets.QFileDialog.getExistingDirectory(self, "Select Directory")
@@ -140,8 +143,18 @@ class MainWindow(QtWidgets.QWidget):
         self.setup_channels()
         self.setup_trigger()
         self.setup_acquisition()
-        self.timer.start()
+
+        time.sleep(.2)
+
         self.save_config()
+        self.timer.start()
+
+    def connect_scope(self):
+        self.picoscope = PS4000A()
+        self.picoscope.open_unit()
+        variant_info = self.picoscope.get_unit_info(PICO_INFO.PICO_VARIANT_INFO)
+        batch_serial = self.picoscope.get_unit_info(PICO_INFO.PICO_BATCH_AND_SERIAL)
+        self.setWindowTitle(f"PicoSope {variant_info} [{batch_serial}]")
 
     # CHANNEL SETTOINGS METHODS
     def open_channel_settings(self):
@@ -274,14 +287,11 @@ class MainWindow(QtWidgets.QWidget):
         self.scope_screen.setYRange(-self.scope_scale, self.scope_scale)
         # self.scope_screen.setXRange(-self.scope_scale, self.scope_scale)
 
-
     def add_welinq_logo(self):
-        svg_widget = QtSvg.QSvgWidget("gui/Welinq_Logo_Dark.svg")  # Replace with your SVG file path
+        svg_widget = QtSvg.QSvgWidget("pico_app/gui/Welinq_Logo_Dark.svg")  # Replace with your SVG file path
         svg_widget.setFixedHeight(25)  # Set the height only
         svg_widget.setFixedWidth(int(2.84*25))  # Set the height only
         self.top_widgets.addWidget(svg_widget)
-
-
 
     def update_data(self, data_chunk: dict[str,np.ndarray]):
         """
@@ -360,9 +370,8 @@ class MainWindow(QtWidgets.QWidget):
     def start_acquisition(self):
         try:
             self.picoscope.get_streaming_latest_values(self.streaming_ready_callback, None)
-        except RuntimeError:
-            pass
-
+        except RuntimeError as e:
+            print(e)
 
     def setup_trigger(self):
         self.picoscope.set_simple_trigger(

@@ -1,7 +1,7 @@
 from PyQt5 import QtWidgets, QtGui, QtCore
 from PyQt5 import uic
 from tools import Channel
-
+import os
 from driver.enums import RANGE
 
 class ClickableLabel(QtWidgets.QLabel):
@@ -22,7 +22,7 @@ class ChannelBtn(QtWidgets.QWidget):
 
     def __init__(self, channel: Channel):
         super().__init__()
-        uic.loadUi("gui/channel_btn.ui" , self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), "channel_btn.ui"), self) 
         self.channel = channel
         self.name_label.setText(channel.name)
         self.update_text()
@@ -69,7 +69,8 @@ class WelinqSpinBox(QtWidgets.QWidget):
 
     def __init__(self, step:int=100, min=100, max=4000):
         super().__init__()
-        uic.loadUi("gui/spinbox_welinq.ui" , self)
+        uic.loadUi(os.path.join(os.path.dirname(__file__), "spinbox_welinq.ui"), self) 
+
         self.name_label.setText("Sample rate")
 
         self.scale_up.clicked.connect(self.action_scale_up)
